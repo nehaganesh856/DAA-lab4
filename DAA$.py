@@ -1,15 +1,13 @@
+import streamlit as st
 import heapq
+import networkx as nx
+import matplotlib.pyplot as plt
 
+st.set_page_config(page_title="Dijkstra's Algorithm", page_icon="🛣️", layout="wide")
+
+# ---------------- Dijkstra Algorithm ----------------
 
 def dijkstra(graph, source):
-    """
-    Dijkstra's Algorithm using Min-Heap
-
-    Time Complexity: O((V + E) log V)
-    Space Complexity: O(V)
-
-    graph: Dictionary {u: [(v, weight), ...]}
-    """
 
     n = len(graph)
 
@@ -18,10 +16,11 @@ def dijkstra(graph, source):
 
     dist[source] = 0
 
-    pq = [(0, source)]  # (distance, vertex)
+    pq = [(0, source)]
     visited = set()
 
     while pq:
+
         d, u = heapq.heappop(pq)
 
         if u in visited:
@@ -30,6 +29,7 @@ def dijkstra(graph, source):
         visited.add(u)
 
         for v, w in graph[u]:
+
             if dist[u] + w < dist[v]:
                 dist[v] = dist[u] + w
                 prev[v] = u
@@ -39,7 +39,9 @@ def dijkstra(graph, source):
 
 
 def reconstruct_path(prev, source, target):
+
     path = []
+
     node = target
 
     while node is not None:
@@ -54,7 +56,7 @@ def reconstruct_path(prev, source, target):
     return []
 
 
-# ---------------- Graph Definition ----------------
+# ---------------- Sample Graph ----------------
 
 graph = {
     0: [(1, 4), (2, 1)],
@@ -65,23 +67,118 @@ graph = {
     5: []
 }
 
-source = 0
+# ---------------- Sidebar ----------------
 
-dist, prev = dijkstra(graph, source)
+st.sidebar.title("Settings")
 
-print(f"Shortest paths from vertex {source}:\n")
+source = st.sidebar.number_input(
+    "Source Vertex",
+    min_value=0,
+    max_value=len(graph)-1,
+    value=0,
+    step=1
+)
 
-print("{:<8}{:<12}{}".format("Vertex", "Distance", "Path"))
-print("-" * 45)
+run = st.sidebar.button("Run Dijkstra")
 
-for v in range(len(graph)):
-    path = reconstruct_path(prev, source, v)
+# ---------------- Title ----------------
 
-    if path:
-        path_str = " -> ".join(map(str, path))
-    else:
-        path_str = "No Path"
+st.title("🛣️ Dijkstra's Shortest Path Algorithm")
 
-    distance = dist[v] if dist[v] != float("inf") else "INF"
+st.write("""
+This application demonstrates **Dijkstra's Algorithm** using a **Min Heap (Priority Queue)**.
 
-    print("{:<8}{:<12}{}".format(v, distance, path_str))
+**Time Complexity:** O((V + E) log V)
+
+**Space Complexity:** O(V)
+""")
+
+# ---------------- Draw Graph ----------------
+
+G = nx.DiGraph()
+
+for u in graph:
+    for v, w in graph[u]:
+        G.add_edge(u, v, weight=w)
+
+fig, ax = plt.subplots(figsize=(8,5))
+
+pos = nx.spring_layout(G, seed=42)
+
+nx.draw_networkx_nodes(
+    G,
+    pos,
+    node_size=900,
+    node_color="skyblue",
+    ax=ax
+)
+
+nx.draw_networkx_labels(
+    G,
+    pos,
+    font_size=12,
+    font_weight="bold",
+    ax=ax
+)
+
+nx.draw_networkx_edges(
+    G,
+    pos,
+    arrows=True,
+    arrowsize=20,
+    ax=ax
+)
+
+edge_labels = nx.get_edge_attributes(G, "weight")
+
+nx.draw_networkx_edge_labels(
+    G,
+    pos,
+    edge_labels=edge_labels,
+    ax=ax
+)
+
+ax.set_title("Graph Visualization")
+
+st.pyplot(fig)
+
+# ---------------- Run Algorithm ----------------
+
+if run:
+
+    dist, prev = dijkstra(graph, source)
+
+    st.success(f"Dijkstra executed successfully from Source Vertex {source}")
+
+    data = []
+
+    for v in range(len(graph)):
+
+        path = reconstruct_path(prev, source, v)
+
+        if path:
+            path_str = " → ".join(map(str, path))
+        else:
+            path_str = "No Path"
+
+        distance = dist[v]
+
+        if distance == float("inf"):
+            distance = "INF"
+
+        data.append({
+            "Vertex": v,
+            "Distance": distance,
+            "Shortest Path": path_str
+        })
+
+    st.subheader("Shortest Distance Table")
+
+    st.table(data)
+
+    st.subheader("Detailed Results")
+
+    for row in data:
+        st.write(
+            f"**Vertex {row['Vertex']}** | Distance = **{row['Distance']}** | Path = **{row['Shortest Path']}**"
+        )
